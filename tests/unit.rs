@@ -479,8 +479,9 @@ fn test_windows_unc_path() {
     assert!(url.is_err());
 }
 
+// Test use of log_syntax_violation option
 #[test]
-fn test_old_log_violation_option() {
+fn test_log_syntax_violation_option() {
     let violation = Cell::new(None);
     let url = {
         let vfn = |s: &str| violation.set(Some(s.to_owned()));
