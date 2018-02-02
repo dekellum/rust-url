@@ -493,3 +493,13 @@ fn test_log_syntax_violation_option() {
     let violation = violation.take();
     assert_eq!(violation, Some("expected //".to_string()));
 }
+
+#[test]
+fn test_options_reuse() {
+    let options = Url::options();
+    let url = options.parse("http:////mozilla.org").unwrap();
+
+    let options = options.base_url(Some(&url));
+    let url = options.parse("/sub\\path").unwrap();
+    assert_eq!(url.as_str(), "http://mozilla.org/sub/path");
+}
