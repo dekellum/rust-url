@@ -186,7 +186,7 @@ impl HeapSizeOf for Url {
 pub struct ParseOptions<'a> {
     base_url: Option<&'a Url>,
     encoding_override: encoding::EncodingOverride,
-    violation_fn: ViolationFn<'a>,
+    violation_fn: Option<ViolationFn<'a>>,
 }
 
 impl<'a> ParseOptions<'a> {
@@ -216,10 +216,7 @@ impl<'a> ParseOptions<'a> {
     /// passed to either method will be used by a parser.
     #[deprecated]
     pub fn log_syntax_violation(mut self, new: Option<&'a Fn(&'static str)>) -> Self {
-        self.violation_fn = match new {
-            Some(f) => ViolationFn::OldFn(f),
-            None => ViolationFn::NoOp
-        };
+        self.violation_fn = new.map(|f| ViolationFn::OldFn(f));
         self
     }
 
@@ -246,10 +243,7 @@ impl<'a> ParseOptions<'a> {
     /// # run().unwrap();
     /// ```
     pub fn syntax_violation_callback(mut self, new: Option<&'a Fn(SyntaxViolation)>) -> Self {
-        self.violation_fn = match new {
-            Some(f) => ViolationFn::NewFn(f),
-            None => ViolationFn::NoOp
-        };
+        self.violation_fn = new.map(|f| ViolationFn::NewFn(f));
         self
     }
 
@@ -402,7 +396,7 @@ impl Url {
         ParseOptions {
             base_url: None,
             encoding_override: EncodingOverride::utf8(),
-            violation_fn: ViolationFn::NoOp,
+            violation_fn: None,
         }
     }
 
