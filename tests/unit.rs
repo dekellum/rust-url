@@ -16,7 +16,7 @@ use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
 use std::net::{Ipv4Addr, Ipv6Addr};
 use std::path::{Path, PathBuf};
-use url::{Host, HostAndPort, Url, form_urlencoded};
+use url::{Host, HostAndPort, Url, form_urlencoded, ParseError};
 
 #[test]
 fn size() {
@@ -506,6 +506,60 @@ fn test_syntax_violation_callback() {
     let v = violation.take().unwrap();
     assert_eq!(v, ExpectedDoubleSlash);
     assert_eq!(v.description(), "expected //");
+}
+
+#[test]
+fn test_invalid_path_percent_enc() {
+    use url::SyntaxViolation::*;
+    let violation = Cell::new(None);
+    let url = Url::options()
+        .syntax_violation_callback(Some(&|v| violation.set(Some(v))))
+        .parse("http://mozilla.org/foo/%z/bar").unwrap();
+    let v = violation.take().unwrap();
+    assert_eq!(v, PercentDecode);
+    assert_eq!(v.description(), "expected 2 hex digits after %");
+    assert_eq!(url.as_str(), "http://mozilla.org/foo/%z/bar");
+}
+
+#[test]
+fn test_invalid_query_percent_enc() {
+    use url::SyntaxViolation::*;
+    let violation = Cell::new(None);
+    let url = Url::options()
+        .syntax_violation_callback(Some(&|v| violation.set(Some(v))))
+        .parse("http://mozilla.org/foo?bar=B%!A").unwrap();
+    let v = violation.take().unwrap();
+    assert_eq!(v, PercentDecode);
+    assert_eq!(v.description(), "expected 2 hex digits after %");
+    assert_eq!(url.as_str(), "http://mozilla.org/foo?bar=B%!A");
+}
+
+#[test]
+fn test_host_percent_enc() {
+    let url = Url::options()
+        .parse("http://mozilla.%6Frg/").unwrap();
+    assert_eq!(url.as_str(), "http://mozilla.org/");
+}
+
+#[test]
+fn test_invalid_host_percent_enc() {
+    let url = Url::options()
+        .parse("http://mozilla.org%/");
+    if let Err(e) = url {
+        assert_eq!(e, ParseError::InvalidDomainCharacter);
+    } else {
+        panic!("Should not parse: {:?}", url);
+    }
+}
+
+#[test]
+fn test_invalid_host_char() {
+    let url = Url::options().parse("http://mozilla%20org/");
+    if let Err(e) = url {
+        assert_eq!(e, ParseError::InvalidDomainCharacter);
+    } else {
+        panic!("Should not parse: {:?}", url);
+    }
 }
 
 #[test]
